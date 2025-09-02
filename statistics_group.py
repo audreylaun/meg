@@ -11,6 +11,7 @@ from mne.epochs import equalize_epoch_counts
 from mne.minimum_norm import apply_inverse, read_inverse_operator
 from mne.stats import spatio_temporal_cluster_1samp_test, summarize_clusters_stc
 from mpl_toolkits.axes_grid1 import ImageGrid, inset_locator, make_axes_locatable
+from mne import SourceEstimate
 
 
 
@@ -242,21 +243,43 @@ def statistics_sensor():
     plt.show()
 
 def get_stcs(subjects_dir, fsave_vertices, directory, sub):
+    src_fname = '/Applications/freesurfer/8.0.0/subjects/fsaverage/bem/fsaverage-ico-4-src.fif'
+    src = mne.read_source_spaces(src_fname)
+
     stc_prod_ident = mne.read_source_estimate(directory + sub + '_ident_prod-lh.stc', subject=sub)
     stc_prod_unrel = mne.read_source_estimate(directory + sub + '_unrel_prod-lh.stc', subject=sub)
     stc_comp_ident = mne.read_source_estimate(directory + sub + '_ident_comp-lh.stc', subject=sub)
     stc_comp_unrel = mne.read_source_estimate(directory + sub + '_unrel_comp-lh.stc', subject=sub)
 
-    morph = mne.compute_source_morph(
-        src=mne.setup_source_space(sub, spacing="oct6", add_dist="patch", subjects_dir=subjects_dir),
+    morph1 = mne.compute_source_morph(
+        stc_prod_ident,
         subject_from=sub,
         subject_to='fsaverage',
-        spacing=fsave_vertices,
+        src_to=src,
         subjects_dir=subjects_dir)
-    prod_ident = morph.apply(stc_prod_ident)
-    prod_unrel = morph.apply(stc_prod_unrel)
-    comp_ident = morph.apply(stc_comp_ident)
-    comp_unrel = morph.apply(stc_comp_unrel)
+    morph2 = mne.compute_source_morph(
+        stc_prod_unrel,
+        subject_from=sub,
+        subject_to='fsaverage',
+        src_to = src,
+        subjects_dir=subjects_dir)
+    morph3 = mne.compute_source_morph(
+        stc_comp_ident,
+        subject_from=sub,
+        subject_to='fsaverage',
+        src_to = src,
+        subjects_dir=subjects_dir)
+    morph4 = mne.compute_source_morph(
+        stc_comp_unrel,
+        subject_from=sub,
+        subject_to='fsaverage',
+        src_to = src,
+        subjects_dir=subjects_dir)
+
+    prod_ident = morph1.apply(stc_prod_ident)
+    prod_unrel = morph2.apply(stc_prod_unrel)
+    comp_ident = morph3.apply(stc_comp_ident)
+    comp_unrel = morph4.apply(stc_comp_unrel)
 
     return prod_ident, prod_unrel, comp_ident, comp_unrel
 
@@ -268,8 +291,8 @@ def statistics_source():
     subs = ['R3250', 'R3254', 'R3261', 'R3264', 'R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3286','R3289','R3290']
 
     n_subjects = len(subs)
-    subjects_dir = '/Applications/freesurfer/7.4.1/subjects'
-    src_fname = '/Applications/freesurfer/7.4.1/subjects/fsaverage/bem/fsaverage-ico-4-src.fif'
+    subjects_dir = '/Applications/freesurfer/8.0.0/subjects'
+    src_fname = '/Applications/freesurfer/8.0.0/subjects/fsaverage/bem/fsaverage-ico-4-src.fif'
 
     # arrays where the stcs for each condition will be stored
     ident_prod_stcs = []
@@ -282,7 +305,7 @@ def statistics_source():
     fsave_vertices = [s["vertno"] for s in src]
 
     for sub in subs:
-        directory = '/Users/admin/Box Sync/Starling/Experiment1/MEG_Data/' + sub + '/'
+        directory = '/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/' + sub + '/'
         stc_prod_ident_fsavg, stc_prod_unrel_fsavg, stc_comp_ident_fsavg, stc_comp_unrel_fsavg = get_stcs(subjects_dir,
                                                                                                           fsave_vertices, directory, sub)
         tstep = stc_prod_ident_fsavg.tstep * 1000
@@ -367,143 +390,181 @@ def statistics_source_withrois():
     from scipy import stats
     from mne.stats import spatio_temporal_cluster_1samp_test, summarize_clusters_stc
 
-    def statistics_source():
-        subs = ['R3250', 'R3254', 'R3261', 'R3264', 'R3270', 'R3271', 'R3272', 'R3273', 'R3275', 'R3277', 'R3279',
-                'R3285', 'R3286', 'R3289', 'R3290']
-        n_subjects = len(subs)
-        subjects_dir = '/Applications/freesurfer/7.4.1/subjects'
-        src_fname = '/Applications/freesurfer/7.4.1/subjects/fsaverage/bem/fsaverage-ico-4-src.fif'
 
-        ident_prod_stcs = []
-        unrel_prod_stcs = []
-        ident_comp_stcs = []
-        unrel_comp_stcs = []
+    subs = ['R3250', 'R3254', 'R3264', 'R3270', 'R3271', 'R3272', 'R3273', 'R3275', 'R3277', 'R3279',
+            'R3285', 'R3286', 'R3289', 'R3290']
+    n_subjects = len(subs)
+    subjects_dir = '/Applications/freesurfer/8.0.0/subjects'
+    src_fname = '/Applications/freesurfer/8.0.0/subjects/fsaverage/bem/fsaverage-ico-4-src.fif'
 
-        src = mne.read_source_spaces(src_fname)
-        fsave_vertices = [s["vertno"] for s in src]
+    ident_prod_stcs = []
+    unrel_prod_stcs = []
+    ident_comp_stcs = []
+    unrel_comp_stcs = []
 
-        # Define your ROIs (make sure names match exactly the FreeSurfer aparc labels)
-        language_rois = [
-            "inferiortemporal-lh", "middletemporal-lh", "superiortemporal-lh", "transversetemporal-lh",
-            "temporalpole-lh", "insula-lh", "bankssts-lh", "fusiform-lh",
-            "parsopercularis-lh", "parsorbitalis-lh", "parstriangularis-lh",
-            "frontalpole-lh", "lateralorbitofrontal-lh", "medialorbitofrontal-lh", "rostralmiddlefrontal-lh",
-            "inferiorparietal-lh", "supramarginal-lh"
-        ]
+    src = mne.read_source_spaces(src_fname)
 
-        # Load left hemisphere labels from fsaverage aparc
-        labels = mne.read_labels_from_annot("fsaverage", parc="aparc", subjects_dir=subjects_dir, hemi="lh")
-        roi_labels = [lab for lab in labels if lab.name in language_rois]
-        roi_vertices = np.concatenate([lab.vertices for lab in roi_labels])
+    fsave_vertices = [s["vertno"] for s in src]
 
-        # Create a boolean mask over left hemisphere vertices: True if vertex in ROI
-        lh_vertices = fsave_vertices[0]
-        vertex_mask = np.isin(lh_vertices, roi_vertices)
+    # Define your ROIs (make sure names match exactly the FreeSurfer aparc labels)
+    language_rois = [
+        "inferiortemporal-lh", "middletemporal-lh", "superiortemporal-lh", "transversetemporal-lh",
+        "temporalpole-lh", "insula-lh", "bankssts-lh", "fusiform-lh",
+        "parsopercularis-lh", "parsorbitalis-lh", "parstriangularis-lh",
+        "frontalpole-lh", "lateralorbitofrontal-lh", "medialorbitofrontal-lh", "rostralmiddlefrontal-lh",
+        "inferiorparietal-lh", "supramarginal-lh"
+    ]
 
-        for sub in subs:
-            directory = f'/Users/admin/Box Sync/Starling/Experiment1/MEG_Data/{sub}/'
-            stc_prod_ident_fsavg, stc_prod_unrel_fsavg, stc_comp_ident_fsavg, stc_comp_unrel_fsavg = get_stcs(
-                subjects_dir, fsave_vertices, directory, sub)
-            tstep = stc_prod_ident_fsavg.tstep * 1000  # ms
+    # Load left hemisphere labels from fsaverage aparc
+    labels = mne.read_labels_from_annot("fsaverage", parc="aparc", subjects_dir=subjects_dir, hemi="lh")
+    roi_labels = [lab for lab in labels if lab.name in language_rois]
+    roi_vertices = np.concatenate([lab.vertices for lab in roi_labels])
 
-            ident_prod_stcs.append(stc_prod_ident_fsavg)
-            unrel_prod_stcs.append(stc_prod_unrel_fsavg)
-            ident_comp_stcs.append(stc_comp_ident_fsavg)
-            unrel_comp_stcs.append(stc_comp_unrel_fsavg)
+    # Create a boolean mask over left hemisphere vertices: True if vertex in ROI
+    lh_vertices = fsave_vertices[0]
+    vertex_mask = np.isin(lh_vertices, roi_vertices)
 
-        prod_ident_data = np.stack([x.data for x in ident_prod_stcs], axis=0)  # shape: subjects x vertices x times
-        prod_unrel_data = np.stack([x.data for x in unrel_prod_stcs], axis=0)
+    for sub in subs:
+        directory = f'/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/{sub}/'
+        stc_prod_ident_fsavg, stc_prod_unrel_fsavg, stc_comp_ident_fsavg, stc_comp_unrel_fsavg = get_stcs(
+            subjects_dir, fsave_vertices, directory, sub)
+        tstep = stc_prod_ident_fsavg.tstep * 1000  # ms
 
-        # Stack conditions, reorder axes: subjects, times, vertices, conditions
-        X = np.stack([prod_ident_data, prod_unrel_data])  # (2 conditions, subjects, vertices, times)
-        X = np.transpose(X, (1, 3, 2, 0))  # now: subjects x times x vertices x conditions
+        ident_prod_stcs.append(stc_prod_ident_fsavg)
+        unrel_prod_stcs.append(stc_prod_unrel_fsavg)
+        ident_comp_stcs.append(stc_comp_ident_fsavg)
+        unrel_comp_stcs.append(stc_comp_unrel_fsavg)
 
-        # Use magnitude and compute difference between conditions
-        X = np.abs(X)
-        X = X[:, :, :, 1] - X[:, :, :, 0]  # difference: condition 1 - 0
+    comp_ident_data = np.stack([x.data for x in ident_comp_stcs], axis=0)  # shape: subjects x vertices x times
+    comp_unrel_data = np.stack([x.data for x in unrel_comp_stcs], axis=0)
 
-        # Select time points between 200 and 600 ms
-        times = ident_prod_stcs[0].times * 1000  # convert to ms
-        time_mask = (times >= 200) & (times <= 600)
-        X = X[:, time_mask, :]  # subjects x selected times x all vertices
+    # Stack conditions, reorder axes: subjects, times, vertices, conditions
+    X = np.stack([comp_ident_data, comp_unrel_data])  # (2 conditions, subjects, vertices, times)
+    X = np.transpose(X, (1, 3, 2, 0))  # now: subjects x times x vertices x conditions
 
-        # Restrict to left hemisphere vertices only
-        n_lh = len(fsave_vertices[0])  # 2562
-        n_rh = len(fsave_vertices[1])  # 2562
+    # Use magnitude and compute difference between conditions
+    X = np.abs(X)
+    X = X[:, :, :, 1] - X[:, :, :, 0]  # difference: condition 1 - 0
 
-        # Data currently has vertices for both hemispheres concatenated along last axis: 5124 vertices
-        # Separate hemispheres:
-        X_lh = X[:, :, :n_lh]  # left hemisphere data
+    # Select time points between 200 and 600 ms
+    times = ident_prod_stcs[0].times * 1000  # convert to ms
+    time_mask = (times >= 200) & (times <= 600)
+    X = X[:, time_mask, :]  # subjects x selected times x all vertices
 
-        # Now apply your ROI vertex mask (length n_lh)
-        X_lh_roi = X_lh[:, :, vertex_mask]
+    # Restrict to left hemisphere vertices only
+    n_lh = len(fsave_vertices[0])  # 2562
+    n_rh = len(fsave_vertices[1])  # 2562
 
-        # Prepare adjacency matrix
-        adjacency = mne.spatial_src_adjacency(src)  # full adjacency 5124x5124
-        adj_lh = adjacency[:n_lh, :n_lh]  # left hemisphere adjacency
+    # Data currently has vertices for both hemispheres concatenated along last axis: 5124 vertices
+    # Separate hemispheres:
+    X_lh = X[:, :, :n_lh]  # left hemisphere data
 
-        # Apply ROI mask to adjacency
-        adjacency_roi = adj_lh[vertex_mask, :][:, vertex_mask]
+    # Now apply your ROI vertex mask (length n_lh)
+    X_lh_roi = X_lh[:, :, vertex_mask]
 
-        # Cluster forming threshold
-        p_threshold = 0.001
-        df = n_subjects - 1
-        t_threshold = stats.distributions.t.ppf(1 - p_threshold / 2, df=df)
+    # Prepare adjacency matrix
+    adjacency = mne.spatial_src_adjacency(src)  # full adjacency 5124x5124
+    adjacency = adjacency.tocsr()
+    adj_lh = adjacency[:n_lh, :n_lh]  # left hemisphere adjacency
 
-        print("Clustering.")
-        T_obs, clusters, cluster_p_values, H0 = spatio_temporal_cluster_1samp_test(
-            X_lh_roi,
-            adjacency=adjacency_roi,
-            n_jobs=None,
-            threshold=t_threshold,
-            buffer_size=None,
-            verbose=True,
-        )
+    # Apply ROI mask to adjacency
+    adjacency_roi = adj_lh[vertex_mask, :][:, vertex_mask]
 
-        # Select significant clusters at p<0.05
-        print(cluster_p_values)
-        good_clusters_idx = np.where(cluster_p_values < 0.05)[0]
-        good_clusters = [clusters[idx] for idx in good_clusters_idx]
+    # Cluster forming threshold
+    p_threshold = 0.001
+    df = n_subjects - 1
+    t_threshold = stats.distributions.t.ppf(1 - p_threshold / 2, df=df)
 
-        print("Significant cluster p-values:", cluster_p_values[good_clusters_idx])
+    print("Clustering.")
+    T_obs, clusters, cluster_p_values, H0 = spatio_temporal_cluster_1samp_test(
+        X_lh_roi,
+        adjacency=adjacency_roi,
+        n_jobs=None,
+        threshold=t_threshold,
+        buffer_size=None,
+        verbose=True,
+    )
 
-        # Visualize clusters
-        # To visualize, create a SourceEstimate for the whole left hemisphere, setting zeros outside ROI
-        # First create zeros array for lh vertices x times
-        stc_data = np.zeros((len(lh_vertices), X_lh_roi.shape[1]))  # vertices x times
+    from mne import SourceEstimate
+    # Use the ROI vertices that match X_lh_roi
+    roi_vertices = fsave_vertices[0][vertex_mask]  # length = n_roi_vertices
 
-        # For each time, set cluster values from cluster mask (for visualization, here just combine all clusters)
-        # This example just creates a sum mask of significant clusters:
-        combined_mask = np.zeros((X_lh_roi.shape[1], len(vertex_mask)), dtype=bool)
-        for clu in good_clusters:
-            # clu is tuple (time_inds, vertex_inds) over reduced ROI vertices
-            combined_mask[clu[0], clu[1]] = True
+    cluster_stcs = []
+    for clu in clusters:
+        mask = clu  # shape (n_times, n_roi_vertices)
 
-        # Sum cluster mask over time and space as a simple visualization example
-        stc_data[vertex_mask, :] = combined_mask.T.astype(float)
+        # T_obs is also (n_times, n_roi_vertices)
+        stc_data = np.zeros_like(T_obs)
+        stc_data[mask] = T_obs[mask]
 
-        # Create SourceEstimate
-        from mne import SourceEstimate
-        stc_all_cluster_vis = SourceEstimate(
+        # Transpose → (n_vertices, n_times)
+        stc_data = stc_data.T
+
+        stc = mne.SourceEstimate(
             stc_data,
-            vertices=[lh_vertices, np.array([])],  # left hemisphere vertices, empty right hemi
-            tmin=times[time_mask][0] / 1000,  # convert back to seconds
-            tstep=tstep / 1000,
-            subject='fsaverage'
+            vertices=[roi_vertices, []],  # must match n_roi_vertices
+            tmin=times[time_mask][0] / 1000,
+            tstep=(times[1] - times[0]) / 1000,
+            subject="fsaverage",
+        )
+        cluster_stcs.append(stc)
+
+        brain = stc.plot(
+            subject="fsaverage",
+            subjects_dir=subjects_dir,
+            hemi="lh",
+            surface="inflated",
+            time_viewer=True,
+            clim="auto",
+            smoothing_steps=5,
         )
 
-        brain = stc_all_cluster_vis.plot(
-            hemi='lh',
-            views='lateral',
-            subjects_dir=subjects_dir,
-            time_label="Temporal extent (ms)",
-            size=(800, 800),
-            smoothing_steps=5,
-            clim=dict(kind="value", pos_lims=[0, 0.5, 1])
-        )
+    # Select significant clusters at p<0.05
+    print(cluster_p_values)
+    good_clusters_idx = np.where(cluster_p_values < 0.05)[0]
+    good_clusters = [clusters[idx] for idx in good_clusters_idx]
+
+    print("Significant cluster p-values:", cluster_p_values[good_clusters_idx])
+
+    # Visualize clusters
+    # To visualize, create a SourceEstimate for the whole left hemisphere, setting zeros outside ROI
+    # First create zeros array for lh vertices x times
+    stc_data = np.zeros((len(lh_vertices), X_lh_roi.shape[1]))  # vertices x times
+
+    # For each time, set cluster values from cluster mask (for visualization, here just combine all clusters)
+    # This example just creates a sum mask of significant clusters:
+    combined_mask = np.zeros((X_lh_roi.shape[1], len(vertex_mask)), dtype=bool)
+    for clu in good_clusters:
+        # clu is tuple (time_inds, vertex_inds) over reduced ROI vertices
+        combined_mask[clu[0], clu[1]] = True
+
+    # Sum cluster mask over time and space as a simple visualization example
+    stc_data[vertex_mask, :] = combined_mask.T.astype(float)
+
+    # Create SourceEstimate
+    from mne import SourceEstimate
+    stc_all_cluster_vis = SourceEstimate(
+        stc_data,
+        vertices=[lh_vertices, np.array([])],  # left hemisphere vertices, empty right hemi
+        tmin=times[time_mask][0] / 1000,  # convert back to seconds
+        tstep=tstep / 1000,
+        subject='fsaverage'
+    )
+
+    brain = stc_all_cluster_vis.plot(
+        hemi='lh',
+        views='lateral',
+        subjects_dir=subjects_dir,
+        time_label="Temporal extent (ms)",
+        size=(800, 800),
+        smoothing_steps=5,
+        clim=dict(kind="value", pos_lims=[0, 0.5, 1])
+    )
 
     # We could save this via the following:
     # brain.save_image('clusters.png')
+
+
 
 def eelbrain_stats():
     import os
@@ -619,8 +680,8 @@ def eelbrain_stats():
             match=ds['subject'],    # subject matching
             sub=ds['Task'] == current_task,
             pmin=0.05,
-            tstart=0.3,
-            tstop=0.6,
+            tstart=0.2,
+            tstop=0.4,
             samples=1000,
             mintime=0.01,
             minsource=5,
@@ -710,3 +771,4 @@ def eelbrain_stats():
 
     return 'My boyfriend is stinky'
 
+statistics_source()
