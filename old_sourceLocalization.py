@@ -9,18 +9,15 @@ import openpyxl
 import os
 
 def source_localization(sub):
-
     # Setting parameters to be used by both production and comprehension
-    subjects_dir = '/Applications/freesurfer/7.4.1/subjects' # freesurfer MRI directory
-    directory = '/Users/admin/Box Sync/Starling/Experiment1/MEG_data/' + sub + '/'
+    subjects_dir = '/Applications/freesurfer/8.0.0/subjects' # freesurfer MRI directory
+    directory = '/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/' + sub + '/'
 
     conductivity = (0.3,) # single layer conductivity
     baseline_start = -300 #in milliseconds
     baseline_end = 0
     snr = 3.0
     method = "dSPM"
-    parc = "aparc"
-    loose = dict(surface=0.2, volume=1.0)
 
     # LOAD COMPREHENSION AND PRODUCTION DATA
     # load epochs
@@ -36,15 +33,13 @@ def source_localization(sub):
     # Reject bad epochs that have a max peak to peak signal amplitude that exceeds 3 picoteslas
     reject_criteria = dict(mag=3000e-15)
     epochs_prod.drop_bad(reject=reject_criteria)
-    # print(epochs_prod.drop_log)
     epochs_comp.drop_bad(reject=reject_criteria)
-    # print(epochs_comp.drop_log)
 
     # Calculate the number of epochs dropped
     prod_dropped = prod_initial - len(epochs_prod)
     comp_dropped = comp_initial - len(epochs_comp)
     # Save number of dropped epochs to excel sheet
-    excel_path = "/Users/admin/Box Sync/Starling/Experiment1/epoch_dropping.xlsx"
+    excel_path = "/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/epoch_dropping.xlsx"
     wb = openpyxl.load_workbook(excel_path)
     ws = wb.active
     header = [cell.value for cell in ws[1]]
@@ -61,7 +56,7 @@ def source_localization(sub):
     epochs_prod.apply_proj()
     epochs_comp.apply_proj()
 
-    # Equalize epoch counts
+    # Equalize epoch counts for each condition
     ident_prod = epochs_prod['production identical']
     unrel_prod = epochs_prod['production unrelated']
     ident_comp = epochs_comp['comprehension identical']
@@ -74,8 +69,8 @@ def source_localization(sub):
     ident_comp = ident_comp.average().filter(l_freq=0, h_freq=40)
     unrel_comp = unrel_comp.average().filter(l_freq=0, h_freq=40)
 
-    # Make anatomical model
-    subject = 'fsaverage'
+    # Make anatomical model -- does not use head position information
+    subject = sub
     model = mne.make_bem_model(subject=subject, ico=4, conductivity=conductivity, subjects_dir=subjects_dir)
     bem = mne.make_bem_solution(model)
     src = mne.setup_source_space(subject, spacing="oct6", add_dist="patch", subjects_dir=subjects_dir)
@@ -151,12 +146,13 @@ def source_localization(sub):
     stc_unrel_prod.save(fname_unrel_prod, ftype='stc', overwrite = True)
 
 
-if __name__ == "__main__":
-    # parser = argparse.ArgumentParser(description="Obtain STC file for a subject.")
-    # parser.add_argument("sub", type=str, help="Subject number (e.g., 101)")
-    #
-    # args = parser.parse_args()
-    # source_localization(args.sub)
 
-    for sub in ['R3250', 'R3254', 'R3261', 'R3264', 'R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3286','R3289','R3290']:
-        source_localization(sub)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Obtain STC file for a subject.")
+    parser.add_argument("sub", type=str, help="Subject number (e.g., 101)")
+
+    args = parser.parse_args()
+    source_localization(args.sub)
+
+    # for sub in ['R3250', 'R3254', 'R3261', 'R3264', 'R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3286','R3289','R3290']:
+    #     source_localization(sub)
