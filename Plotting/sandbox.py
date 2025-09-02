@@ -15,8 +15,8 @@ def epoch_inspect(sub):
         mne.viz.plot_compare_evokeds(trial, picks = 'mag')
 
 def sanity_check(sub):
-    subjects_dir = '/Applications/freesurfer/7.4.1/subjects'
-    directory = f'/Users/admin/Box Sync/Starling/Experiment1/STCs/{sub}/'
+    subjects_dir = '/Applications/freesurfer/8.0.0/subjects'
+    directory = f'/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/{sub}/'
 
     stcs = {
         'Comprehension identical': mne.read_source_estimate(f"{directory}{sub}_ident_comp-lh.stc", sub),
@@ -115,7 +115,7 @@ def grand_average_sensor():
     comp_unrel = []
 
     for sub in subs:
-        directory = '/Users/admin/Box Sync/Starling/Experiment1/MEG_data/' + sub + '/'
+        directory = '/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/' + sub + '/'
         fname = directory + sub + '_prod-epo.fif'
         prod = mne.read_epochs(fname, verbose=False)
         a = prod['production identical']
@@ -128,10 +128,10 @@ def grand_average_sensor():
 
         mne.epochs.equalize_epoch_counts([a,b,c,d])
 
-        prod_ident_evoked = a.average().filter(l_freq=0, h_freq=40, verbose=False)
-        prod_unrel_evoked = b.average().filter(l_freq=0, h_freq=40, verbose=False)
-        comp_ident_evoked = c.average().filter(l_freq=0, h_freq=40, verbose=False)
-        comp_unrel_evoked = d.average().filter(l_freq=0, h_freq=40, verbose=False)
+        prod_ident_evoked = a.average().filter(l_freq=0, h_freq=40)
+        prod_unrel_evoked = b.average().filter(l_freq=0, h_freq=40)
+        comp_ident_evoked = c.average().filter(l_freq=0, h_freq=40)
+        comp_unrel_evoked = d.average().filter(l_freq=0, h_freq=40)
 
         prod_ident.append(prod_ident_evoked)
         prod_unrel.append(prod_unrel_evoked)
@@ -216,12 +216,53 @@ def get_stcs(subjects_dir, fsave_vertices, directory, sub):
 
     return prod_ident, prod_unrel, comp_ident, comp_unrel
 
+def get_stcs(subjects_dir, fsave_vertices, directory, sub):
+    src_fname = '/Applications/freesurfer/8.0.0/subjects/fsaverage/bem/fsaverage-ico-4-src.fif'
+    src = mne.read_source_spaces(src_fname)
+
+    stc_prod_ident = mne.read_source_estimate(directory + sub + '_ident_prod-lh.stc', subject=sub)
+    stc_prod_unrel = mne.read_source_estimate(directory + sub + '_unrel_prod-lh.stc', subject=sub)
+    stc_comp_ident = mne.read_source_estimate(directory + sub + '_ident_comp-lh.stc', subject=sub)
+    stc_comp_unrel = mne.read_source_estimate(directory + sub + '_unrel_comp-lh.stc', subject=sub)
+
+    morph1 = mne.compute_source_morph(
+        stc_prod_ident,
+        subject_from=sub,
+        subject_to='fsaverage',
+        src_to=src,
+        subjects_dir=subjects_dir)
+    morph2 = mne.compute_source_morph(
+        stc_prod_unrel,
+        subject_from=sub,
+        subject_to='fsaverage',
+        src_to = src,
+        subjects_dir=subjects_dir)
+    morph3 = mne.compute_source_morph(
+        stc_comp_ident,
+        subject_from=sub,
+        subject_to='fsaverage',
+        src_to = src,
+        subjects_dir=subjects_dir)
+    morph4 = mne.compute_source_morph(
+        stc_comp_unrel,
+        subject_from=sub,
+        subject_to='fsaverage',
+        src_to = src,
+        subjects_dir=subjects_dir)
+
+    prod_ident = morph1.apply(stc_prod_ident)
+    prod_unrel = morph2.apply(stc_prod_unrel)
+    comp_ident = morph3.apply(stc_comp_ident)
+    comp_unrel = morph4.apply(stc_comp_unrel)
+
+    return prod_ident, prod_unrel, comp_ident, comp_unrel
+
 def plot_stcs():
     subs = ['R3250', 'R3254', 'R3261', 'R3264', 'R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3286','R3289','R3290']
 
     n_subjects = len(subs)
-    subjects_dir = '/Applications/freesurfer/7.4.1/subjects'
-    src_fname = '/Applications/freesurfer/7.4.1/subjects/fsaverage/bem/fsaverage-ico-4-src.fif'
+    subjects_dir = '/Applications/freesurfer/8.0.0/subjects'
+    src_fname = '/Applications/freesurfer/8.0.0/subjects/fsaverage/bem/fsaverage-ico-4-src.fif'
 
     # arrays where the stcs for each condition will be stored
     ident_prod_stcs = []
@@ -234,7 +275,7 @@ def plot_stcs():
     fsave_vertices = [s["vertno"] for s in src]
 
     for sub in subs:
-        directory = '/Users/admin/Box Sync/Starling/Experiment1/MEG_Data/' + sub + '/'
+        directory = '/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/' + sub + '/'
         stc_prod_ident_fsavg, stc_prod_unrel_fsavg, stc_comp_ident_fsavg, stc_comp_unrel_fsavg = get_stcs(subjects_dir,
                                                                                                           fsave_vertices, directory, sub)
         tstep = stc_prod_ident_fsavg.tstep * 1000
@@ -256,7 +297,6 @@ def plot_stcs():
             subject=stcs[0].subject
         )
 
-    # Grand average for one condition (you can repeat this for others)
     avg_ident_prod = grand_average_stcs(ident_prod_stcs)
     avg_unrel_prod = grand_average_stcs(unrel_prod_stcs)
     avg_ident_comp = grand_average_stcs(ident_comp_stcs)
@@ -323,7 +363,7 @@ def plot_stcs():
     plt.figure(figsize=(12, 5))
 
     for label, timecourse in timecourses.items():
-        plt.plot(times, timecourse * 1e9, label=label)  # convert Am to nAm
+        plt.plot(times, abs(timecourse * 1e9), label=label)  # convert Am to nAm
 
     plt.xlabel('Time (ms)')
     plt.ylabel('Amplitude (nAm)')
@@ -333,6 +373,43 @@ def plot_stcs():
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+
+    difference_prod = avg_unrel_prod - avg_ident_prod
+    difference_comp = avg_unrel_comp - avg_ident_comp
+
+    stcs = {
+        'Comprehension difference': difference_comp,
+        'Production difference': difference_prod
+    }
+
+    # stcs = {
+    #     'Comprehension identical': avg_ident_comp,
+    #     'Comprehension unrelated': avg_unrel_comp,
+    #     'Production identical': avg_ident_prod,
+    #     'Production unrelated': avg_unrel_prod,
+    # }
+
+    brains = []
+
+    cmaps = ['hot', 'cool', 'spring', 'winter']
+    for (title, stc), cmap in zip(stcs.items(), cmaps):
+        brain = stc.plot(
+            subjects_dir=subjects_dir,
+            hemi='lh',
+            colormap=cmap,
+            clim=dict(kind="value", lims=[3, 6, 9]),
+            smoothing_steps=7,
+            title=title
+        )
+        brain.add_text(0.1, 0.9, title, "title", font_size=14)
+        brains.append(brain)  # Save each brain object
+
+    # Now block until all windows are closed
+    from pyvistaqt import BackgroundPlotter
+    from qtpy.QtWidgets import QApplication
+    app = QApplication.instance()
+    if app is not None:
+        app.exec_()  # Start the Qt event loop manually
 
 def num_epochs():
     subs = ['R3250', 'R3254', 'R3261', 'R3264', 'R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3286','R3289','R3290']
@@ -352,3 +429,27 @@ def num_epochs():
         b = prod['production unrelated']
         print(len(a))
         print(len(b))
+
+def evoked_check(sub):
+    directory = '/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/' + sub + '/'
+    fname = directory + sub + '_prod-epo.fif'
+    prod = mne.read_epochs(fname, verbose=False)
+    a = prod['production identical']
+    b = prod['production unrelated']
+
+    fname = directory + sub + '_comp-epo.fif'
+    comp = mne.read_epochs(fname, verbose=False)
+    c = comp['comprehension identical']
+    d = comp['comprehension unrelated']
+
+    mne.epochs.equalize_epoch_counts([a, b, c, d])
+
+    prod_ident_evoked = a.average().filter(l_freq=0, h_freq=40)
+    prod_unrel_evoked = b.average().filter(l_freq=0, h_freq=40)
+    comp_ident_evoked = c.average().filter(l_freq=0, h_freq=40)
+    comp_unrel_evoked = d.average().filter(l_freq=0, h_freq=40)
+
+    mne.viz.plot_compare_evokeds([prod_ident_evoked, prod_unrel_evoked, comp_ident_evoked, comp_unrel_evoked])
+
+# evoked_check('R3273')
+plot_stcs()
