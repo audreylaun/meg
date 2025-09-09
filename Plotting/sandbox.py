@@ -452,4 +452,4 @@ def evoked_check(sub):
     mne.viz.plot_compare_evokeds([prod_ident_evoked, prod_unrel_evoked, comp_ident_evoked, comp_unrel_evoked])
 
 # evoked_check('R3273')
-plot_stcs()
+# plot_stcs()
