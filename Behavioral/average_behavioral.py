@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import os
 
 subs = ['R3250', 'R3254', 'R3261', 'R3264', 'R3270', 'R3271', 'R3272','R3275',
@@ -10,14 +9,7 @@ conditions = ['B','C','D','A','D','A','B','D','B','C','E','F','G','H','E','F','G
 directory = '/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/Behavioral_Data/'
 master_file = os.path.join(directory, 'RTs_and_Accuracy_ALL.xlsx')
 
-# Load master (or make new if missing)
-if os.path.exists(master_file):
-    master_df = pd.read_excel(master_file)
-else:
-    master_df = pd.DataFrame(columns=[
-        "Subject", "Accuracy", "Identical RTs Avg", "Identical RTs SD",
-        "Unrelated RTs Avg", "Unrelated RTs SD"
-    ])
+master_df = pd.read_excel(master_file)
 
 for i, sub in enumerate(subs):
     condition = conditions[i]
@@ -43,26 +35,25 @@ for i, sub in enumerate(subs):
     acc_col = f"{sub} Accuracy"
     rt_col = f"{sub} RTs"
 
-    # Convert to numeric (force errors -> NaN, then drop)
+    # Convert to numeric
     df[acc_col] = pd.to_numeric(df[acc_col], errors="coerce")
     df[rt_col] = pd.to_numeric(df[rt_col], errors="coerce")
 
-    # --- Accuracy count ---
+    # Accuracy
     accuracy_count = df.loc[df["Triggers"] != 136, acc_col].sum()
 
-    # --- Identical RTs (Trigger 130, correct only) ---
+    # Identical RTs (Trigger 130, correct only)
     mask_ident = (df["Triggers"] == 130) & (df[acc_col] == 1)
     ident_rts = df.loc[mask_ident, rt_col]
     ident_avg = ident_rts.mean()
     ident_sd = ident_rts.std()
 
-    # --- Unrelated RTs (Trigger 132, correct only) ---
+    # Unrelated RTs (Trigger 132, correct only)
     mask_unrel = (df["Triggers"] == 132) & (df[acc_col] == 1)
     unrel_rts = df.loc[mask_unrel, rt_col]
     unrel_avg = unrel_rts.mean()
     unrel_sd = unrel_rts.std()
 
-    # --- Append row to master ---
     row = {
         "Subject": sub,
         "Accuracy": accuracy_count,
@@ -73,7 +64,5 @@ for i, sub in enumerate(subs):
     }
     master_df = pd.concat([master_df, pd.DataFrame([row])], ignore_index=True)
 
-# Save updated master file
 master_df.to_excel(master_file, index=False)
-print("✅ Updated:", master_file)
 
