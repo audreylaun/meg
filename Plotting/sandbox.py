@@ -108,7 +108,7 @@ def region_plotting(sub, choice):
     plt.show()
 
 def grand_average_sensor():
-    subs = ['R3250', 'R3254', 'R3261', 'R3264', 'R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3286','R3289','R3290']
+    subs = ['R3250', 'R3254', 'R3261', 'R3264', 'R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3286','R3289','R3290', 'R3326','R3327','R3328']
     prod_ident = []
     prod_unrel = []
     comp_ident = []

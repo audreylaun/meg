@@ -156,7 +156,7 @@ def preprocess_meg(sub, condition):
     fname = directory + '/' + sub + '_prod-epo.fif'
     epochs.save(fname, overwrite=True)
 
-    del raw, epochs
+    # del raw, epochs, raw_filt, ica
 
 
     #COMPREHENSION
@@ -256,31 +256,14 @@ def fix_comp_projs(sub, condition):
 
 def create_comp_epochs(raw, sub, condition, directory):
     comp_condition = 'X'
-    prod_condition = 'X'
-    if condition == 'A':
+    if condition == 'A' or 'D':
         comp_condition = 'A1'
-        prod_condition = 'B1'
-    elif condition == 'B':
+    elif condition == 'B' or 'C':
         comp_condition = 'B1'
-        prod_condition = 'A1'
-    elif condition == 'C':
-        comp_condition = 'B1'
-        prod_condition = 'A1'
-    elif condition == 'D':
-        comp_condition = 'A1'
-        prod_condition = 'B1'
-    elif condition == 'E':
+    elif condition == 'E' or 'H':
         comp_condition = 'A2'
-        prod_condition = 'B2'
-    elif condition == 'F':
+    elif condition == 'F' or 'G':
         comp_condition = 'B2'
-        prod_condition = 'A2'
-    elif condition == 'G':
-        comp_condition = 'B2'
-        prod_condition = 'A2'
-    elif condition == 'H':
-        comp_condition = 'A2'
-        prod_condition = 'B2'
 
     events = mne.find_events(raw, stim_channel="STI 014")
     if sub in ['R3250', 'R3254', 'R3260', 'R3261', 'R3264']:
@@ -356,5 +339,5 @@ def main():
 
     return 0
 
-preprocess_meg('R3250', 'B')
+preprocess_meg('R3328', 'G')
 
