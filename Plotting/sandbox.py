@@ -108,14 +108,15 @@ def region_plotting(sub, choice):
     plt.show()
 
 def grand_average_sensor():
-    subs = ['R3250', 'R3254', 'R3261', 'R3264', 'R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3286','R3289','R3290', 'R3326','R3327','R3328']
+    # subs = ['R3250', 'R3254', 'R3261', 'R3264', 'R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3286','R3289','R3290', 'R3326','R3327','R3328', 'R3329']
+    subs = ['R3250', 'R3254', 'R3261', 'R3264', 'R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3286','R3289','R3290','R3285','R3286','R3289','R3290','R3326','R3327','R3328', 'R3329']
     prod_ident = []
     prod_unrel = []
     comp_ident = []
     comp_unrel = []
 
     for sub in subs:
-        directory = '/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/' + sub + '/'
+        directory = '/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/Testing/' + sub + '/'
         fname = directory + sub + '_prod-epo.fif'
         prod = mne.read_epochs(fname, verbose=False)
         a = prod['production identical']
@@ -431,7 +432,7 @@ def num_epochs():
         print(len(b))
 
 def evoked_check(sub):
-    directory = '/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/' + sub + '/'
+    directory = '/Users/audreylaun/Library/CloudStorage/Box-Box/Starling/Experiment1/MEG_data/Testing/' + sub + '/'
     fname = directory + sub + '_prod-epo.fif'
     prod = mne.read_epochs(fname, verbose=False)
     a = prod['production identical']
@@ -449,7 +450,8 @@ def evoked_check(sub):
     comp_ident_evoked = c.average().filter(l_freq=0, h_freq=40)
     comp_unrel_evoked = d.average().filter(l_freq=0, h_freq=40)
 
-    mne.viz.plot_compare_evokeds([prod_ident_evoked, prod_unrel_evoked, comp_ident_evoked, comp_unrel_evoked])
+    mne.viz.plot_compare_evokeds([prod_ident_evoked, prod_unrel_evoked, comp_ident_evoked, comp_unrel_evoked], picks='mag')
 
-# evoked_check('R3273')
+# for i in ['R3250','R3254','R3261','R3264','R3270','R3271','R3272','R3273','R3275','R3277','R3279','R3285','R3326', 'R3327', 'R3328', 'R3329']:
+#     evoked_check(i)
 # plot_stcs()
